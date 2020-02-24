@@ -4,13 +4,13 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build -> C64 -> VICE",
+            "label": "build",
             "type": "shell",
             "osx": {
-                "command": "bin/mac/acme -f cbm -l build/labels -o build/main.prg code/main.asm && /Applications/Vice/x64.app/Contents/MacOS/x64 -moncommands build/labels build/main.prg 2> /dev/null",
+                "command": "bin/mac/acme -f plain -l build/labels -o build/main.prg code/clock.asm ",
             },
             "windows": {
-                "command": "bin\\win\\acme -f cbm -l build/labels -o build/main.prg code/main.asm && C:/tools/vice/x64.exe -moncommands build/labels build/main.prg"
+                "command": "bin\\win\\acme -f cbm -l build/labels -o build/main.prg code/clock.asm && C:/tools/vice/x64.exe -moncommands build/labels build/main.prg"
             },
             "linux": {
                 "command": "bin/linux/acme -f cbm -l build/labels -o build/main.prg code/main.asm && x64 -moncommands build/labels build/main.prg 2> /dev/null"
