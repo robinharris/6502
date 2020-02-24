@@ -2,7 +2,10 @@
 ;
 ;Program to display a 24 hour clock on line 1
 ;and day plus date on line 2
-;Date: 17th February 2020
+;
+;  MAJOR REFACTORING
+;
+;Date: 24th February 2020
 ;Author: Robin Harris
 
 ;RAM: 32k $0000 to $7FFF
@@ -17,6 +20,8 @@ reset_vector = $E100
 IRQ_vector = $E400
 LCD_Data = $8001   
 LCD_Command = $8000
+
+;ZERO PAGE USAGE
 DELAYCOUNTER = $0050
 INNERDELAY = $0054
 SECONDS = $0051
@@ -25,6 +30,7 @@ HOURS = $0053
 DAYOFWEEK = $0054
 MONTH = $0055
 DAYOFMONTH = $0056
+; data to initialise
 SETMINUTES = $10
 SETHOURS = $18
 SETDAYOFMONTH = $24 ; 1 to 31
@@ -37,11 +43,6 @@ SETMONTH = $1 ; 0 to 11
     STA     LCD_Data
     JSR     BUSY
 }
-!macro insertSpace{
-    LDA     #$20
-    STA     LCD_Data
-    JSR     BUSY
-}
                 *=reset_vector
 ; *** SETUP
                 SEI                             ; interrupts off
@@ -50,9 +51,9 @@ SETMONTH = $1 ; 0 to 11
                 JSR             LCDINIT         ; initialise LCD
                 LDA             #0              ; initialise seconds
                 STA             SECONDS         ; 
-                LDA             #SETMINUTES          ; initialise minutes
+                LDA             #SETMINUTES     ; initialise minutes
                 STA             MINUTES         ;
-                LDA             #SETHOURS           ; initialise hours
+                LDA             #SETHOURS       ; initialise hours
                 STA             HOURS           ;
                 LDA             #SETDAYOFMONTH  ; initialise dayOfMonth
                 STA             DAYOFMONTH      ;
@@ -64,7 +65,7 @@ SETMONTH = $1 ; 0 to 11
 
 ; *** counting
 ; start by sending the current time values to the LCD
-START           JSR             LINE1           ; clear the display
+START           JSR             CLEAR           ; clear the display
                 LDA             #$20            ; load value for space
                 STA             LCD_Data        ; send display character 4 times
                 JSR             BUSY
@@ -74,16 +75,63 @@ START           JSR             LINE1           ; clear the display
                 JSR             BUSY
                 STA             LCD_Data
                 JSR             BUSY
-                LDY             #$3             ; 3 is the index for hours
-                JSR             DISPLAY         ; update LCD
+                LDA             HOURS
+                JSR             DISP2CHAR       ; update LCD
                 +insertColon
-                LDY             #$2             ; 2 is the index for minutes
-                JSR             DISPLAY         ; update LCD
+                LDA             MINUTES         ; 2 is the index for minutes
+                JSR             DISP2CHAR       ; update LCD
                 +insertColon
-                LDY             #$1             ; 1 is the index for seconds
-                JSR             DISPLAY         ; update LCD
-                JSR             LINE2
-
+                LDA             SECONDS             ; 1 is the index for seconds
+                JSR             DISP2CHAR       ; update LCD
+; move to line 2
+                LDA             #$c0            ; move to position $c0 which is second row left
+                STA             LCD_Command
+                JSR             BUSY
+                LDA             #$20            ; character for space
+                STA             LCD_Data        ; send three spaces 
+                JSR             BUSY
+                STA             LCD_Data
+                JSR             BUSY
+                STA             LCD_Data
+                JSR             BUSY
+                LDA             DAYOFWEEK       ; get the day of week number
+                ASL                             ; multiply by 2
+                ADC             DAYOFWEEK       ; add another DAYOFWEEK effectively multiplying by 3
+                TAY                             ; set up an index into DAYNAMES
+                LDA             DAYNAMES, Y
+                STA             LCD_Data        ; display day of week character 1
+                INY                             ; increment Y while LCD is busy
+                JSR             BUSY
+                LDA             DAYNAMES, Y
+                STA             LCD_Data        ; display day of week character 2
+                INY                             ; increment Y while LCD is busy
+                JSR             BUSY
+                LDA             DAYNAMES, Y
+                STA             LCD_Data        ; display day of week character 3
+                JSR             BUSY
+                LDA             #$20            ; load value for space
+                STA             LCD_Data        ; send to display
+                JSR             BUSY
+                LDA             DAYOFMONTH      ; get the day of month number
+                JSR             DISP2CHAR       ; display the day of month
+                LDA             #$20            ; load value for space
+                STA             LCD_Data        ; send to display
+                JSR             BUSY
+                LDA             MONTH           ; get month number
+                ASL                             ; multiply by 2
+                ADC             MONTH           ; add another month effectively multiplying by 3
+                TAY                             ; set up an index into MONTHNAMES
+                LDA             MONTHNAMES, Y
+                STA             LCD_Data        ; display month character 1
+                INY
+                JSR             BUSY
+                LDA             MONTHNAMES, Y
+                STA             LCD_Data        ; display month character 2
+                INY
+                JSR             BUSY
+                LDA             MONTHNAMES, Y
+                STA             LCD_Data        ; display month character 3
+                JSR             BUSY
 ; main timing delay loop
                 LDY             #$F1            ; a counter
 -               JSR             LONGDELAY       ; do a long delay the number of times set by the counter
@@ -104,7 +152,7 @@ MINS            LDA             #$0
                 LDA             MINUTES
                 SED
                 CLC                             ; clear carry
-                ADC             #1             ; add 1 to minutes
+                ADC             #1              ; add 1 to minutes
                 CLD
                 CMP             #$60            ; check if 60
                 BCS             HRS             ; if 60 update hours
@@ -112,53 +160,54 @@ MINS            LDA             #$0
                 JMP             START
 HRS             LDA             #0
                 STA             MINUTES         ; reset minutes
-                STA             SECONDS         ; reset seconds
                 LDA             HOURS
                 SED
                 CLC
                 ADC             #1
                 CLD
                 CMP             #$24
-                BCS             DAY
+                BCS             NEWDAY
                 STA             HOURS
                 JMP             START
-DAY             LDA             #$0             ; reset hours to 0
+NEWDAY          LDA             #$0             ; reset hours to 0
                 STA             HOURS
                 INC             DAYOFWEEK       ; increment day of week
                 LDA             DAYOFWEEK       ; load A to compare
                 CMP             #$7             ; Check if we are on a new week
-                BCS             WEEK            ; reset day of week to 1
-                LDA             #$0             ; reset hours to 0
-                STA             HOURS
-                JMP             START
-WEEK            LDA             #$0             ; reset day of week to 1
+                BCC             CHECKMONTH      ; reset day of week to 1
+                LDA             #$0             ; reset day of week
                 STA             DAYOFWEEK
-                LDA             DAYOFMONTH
-                SED
+CHECKMONTH      LDA             DAYOFMONTH
+                SED                             ; enter decimal mode
                 CLC                             ; clear carry
-                ADC             #1             ; add 1 to minutes
-                CLD
-                CMP             #$28            ; check if 28 ie end of February
-                BCS             NEWMONTH        ; if 28 update month
+                ADC             #1              ; add 1
+                CLD                             ; exit decimal mode
+                STA             DAYOFMONTH      ; store the new value for comparison
+                LDY             MONTH           ; index into daysinmonth byte list
+                CMP             DAYSINMONTH, Y  ; 
+                BCS             NEWMONTH        ; if dayinmonth is now greater than the month value branch to reset
+                JMP             START
+NEWMONTH        LDA             #$0
+                STA             DAYOFMONTH
+                INC             MONTH
                 JMP             START
 
-NEWMONTH        NOP
-
-DISPLAY         LDA             $0050, Y       ; base address + Y which should contain 1=SECONDS, 2=MINUTES, 3=HOURS
-                PHA
+; display a number up to 99
+; on entering A contains the number to display
+DISP2CHAR       PHA
                 LSR                            ; shift high nibble to lower 4 bits
                 LSR
                 LSR
                 LSR
                 TAY                             ; transfer into Y
                 LDA             NUMBERS, Y
-                STA             LCD_Data        ; send first digit fo hours
+                STA             LCD_Data        ; send first digit
                 JSR             BUSY
                 PLA
                 AND             #$0F            ; select lower nibble
                 TAY
                 LDA             NUMBERS, Y
-                STA             LCD_Data        ; send second digit of hours
+                STA             LCD_Data        ; send second digit
                 JSR             BUSY
                 RTS
 
@@ -178,75 +227,11 @@ LCDINIT         LDA             #%00111000      ; set mode to 2 line 8 bit
                 RTS
 
 ; *** Positions cursor top left and clears display
-LINE1:          PHA
-                LDA             #%00000010            ; move back to home
+CLEAR           LDA             #%00000010            ; move back to home
                 STA             LCD_Command
                 JSR             BUSY
-                PLA
                 RTS
 
-; *** Positions cursor at beginning of second line and displays more information
-LINE2           PHA
-                LDA             #$c0            ; move to position $c0 which is second row left
-                STA             LCD_Command
-                JSR             BUSY
-                LDA             #$20            ; character for space
-                STA             LCD_Data        ; send three spaces 
-                JSR             BUSY
-                STA             LCD_Data
-                JSR             BUSY
-                STA             LCD_Data
-                JSR             BUSY
-                LDA             DAYOFWEEK       ; get the day of week number
-                ASL                             ; multiply by 2
-                ADC             DAYOFWEEK       ; add another DAYOFWEEK effectively multiplying by 3
-                TAY                             ; set up an index into DAYNAMES
-                LDA             DAYNAMES, Y
-                STA             LCD_Data        ; display day of week character 1
-                INY
-                JSR             BUSY
-                LDA             DAYNAMES, Y
-                STA             LCD_Data        ; display day of week character 2
-                INY
-                JSR             BUSY
-                LDA             DAYNAMES, Y
-                STA             LCD_Data        ; display day of week character 3
-                JSR             BUSY
-                +insertSpace
-                LDA             DAYOFMONTH      ; get the day of month number
-                PHA
-                LSR                             ; shift high nibble to lower 4 bits
-                LSR
-                LSR
-                LSR
-                TAY                             ; transfer into Y
-                LDA             NUMBERS, Y
-                STA             LCD_Data        ; send first digit fo hours
-                JSR             BUSY
-                PLA
-                AND             #$0F            ; select lower nibble
-                TAY
-                LDA             NUMBERS, Y
-                STA             LCD_Data        ; send second digit of hours
-                JSR             BUSY
-                +insertSpace
-                LDA             MONTH           ; get month number
-                ASL                             ; multiply by 2
-                ADC             MONTH           ; add another month effectively multiplying by 3
-                TAY                             ; set up an index into MONTHNAMES
-                LDA             MONTHNAMES, Y
-                STA             LCD_Data        ; display month character 1
-                INY
-                JSR             BUSY
-                LDA             MONTHNAMES, Y
-                STA             LCD_Data        ; display month character 2
-                INY
-                JSR             BUSY
-                LDA             MONTHNAMES, Y
-                STA             LCD_Data        ; display month character 3
-                JSR             BUSY
-                PLA
-                RTS
 
 ; *** Checks Bit 7 of Command Register until it clears to 0
 BUSY            PHA
