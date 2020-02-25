@@ -31,10 +31,10 @@ DAYOFWEEK = $0054
 MONTH = $0055
 DAYOFMONTH = $0056
 ; data to initialise
-SETMINUTES = $10
-SETHOURS = $18
-SETDAYOFMONTH = $24 ; 1 to 31
-SETDAYOFWEEK = $0 ; 0 to 6
+SETMINUTES = $7
+SETHOURS = $9
+SETDAYOFMONTH = $25 ; 1 to 31
+SETDAYOFWEEK = $1 ; 0 to 6
 SETMONTH = $1 ; 0 to 11
 
 
@@ -43,6 +43,8 @@ SETMONTH = $1 ; 0 to 11
     STA     LCD_Data
     JSR     BUSY
 }
+
+; ================================== MAIN ====================================================
                 *=reset_vector
 ; *** SETUP
                 SEI                             ; interrupts off
@@ -174,7 +176,7 @@ NEWDAY          LDA             #$0             ; reset hours to 0
                 INC             DAYOFWEEK       ; increment day of week
                 LDA             DAYOFWEEK       ; load A to compare
                 CMP             #$7             ; Check if we are on a new week
-                BCC             CHECKMONTH      ; reset day of week to 1
+                BCS             CHECKMONTH      ; reset day of week to 1
                 LDA             #$0             ; reset day of week
                 STA             DAYOFWEEK
 CHECKMONTH      LDA             DAYOFMONTH
@@ -187,10 +189,13 @@ CHECKMONTH      LDA             DAYOFMONTH
                 CMP             DAYSINMONTH, Y  ; 
                 BCS             NEWMONTH        ; if dayinmonth is now greater than the month value branch to reset
                 JMP             START
-NEWMONTH        LDA             #$0
+NEWMONTH        LDA             #$1
                 STA             DAYOFMONTH
                 INC             MONTH
                 JMP             START
+
+; ================================== MAIN END =================================================
+
 
 ; display a number up to 99
 ; on entering A contains the number to display
@@ -258,7 +263,7 @@ LONGDELAY       PHA
 NUMBERS     !text "0123456789"
 DAYNAMES    !text "MONTUEWEDTHUFRISATSUN"
 MONTHNAMES  !text "JANFEBMARAPRMAYJUNJULAUGSEPOCTNOVDEC"
-DAYSINMONTH !byte 31,28,31,30,31,30,31,31,30,31,30,31
+DAYSINMONTH !byte $31,$28,$31,$30,$31,$30,$31,$31,$30,$31,$30,$31
 
 ; *** IRQ ISR.  Zeros seconds and minutes
                 * = IRQ_vector
