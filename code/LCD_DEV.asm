@@ -42,7 +42,8 @@ VIAF = $801F     ; ORA/IRA without handshake
 ; ZERO PAGE
 VAL      = $49             ; key pad value read
 COUNTER  = $50             ; delay length counter
-SADDR    = $51             ; low byte address of string to display          
+SADDR    = $51             ; low byte address of string to display 
+                           ; high byte in $52         
 
 ;==============================================================================
 ; MACROS
@@ -73,9 +74,10 @@ SADDR    = $51             ; low byte address of string to display
 ;==============================================================================
 ; MAIN PROGRAM GOES HERE
 ;
-         +PRINT   S1
-S1       !text"Hello Rob",0
-LOOP     JMP      LOOP
+         +PRINT   S2
+S2       !text"Cracked it!",0
+LOOP     NOP
+         JMP      LOOP
 ;==============================================================================
 
 ;SUBROUTINES
@@ -103,22 +105,22 @@ LCDINIT
          STA      LCDC
          JSR      DELAY             ; default 100uS delay
 ; next command is still in 8 bit mode
-         LDA      #%00111100        ; 8 bit mode, N = 1 (2 lines) and F = 0 (5 x 8 dots)
-         JSR      DELAY       
+         LDA      #%00111000        ; 8 bit mode, N = 1 (2 lines) and F = 0 (5 x 8 dots)
+         JSR      BUSY       
          STA      LCDC
 ; datasheet is unclear if next step is strictly necessary here.  Mostly works ok to set required display now
 ; but for comfort I set the display off here and turn it back on at the end of initialisation
          LDA      #%00001000        ; display off
-         JSR      DELAY       
+         JSR      BUSY       
          STA      LCDC
          LDA      #%00000001        ; clear display
-         JSR      DELAY       
+         JSR      BUSY       
          STA      LCDC
          LDA      #%00000110        ; entry mode - shift cursor right no display shift
-         JSR      DELAY       
+         JSR      BUSY       
          STA      LCDC
          LDA      #%00001100        ; display on, cursor off
-         JSR      DELAY       
+         JSR      BUSY       
          STA      LCDC
 ; send the welcome message
          LDY      #0                ; prepare Y to index into message
@@ -161,10 +163,12 @@ CLR      LDA      #$C0              ; move beginning of line 2
          STA      LCDC
          LDA      #$20              ; load 'space'
          LDX      #$10              ; need to write space to 16 character positions
--        STA      LCDD
+-        JSR      BUSY
+         STA      LCDD
          DEX
          BNE      -
          LDA      #$C0              ; move beginning of line 2
+         JSR      BUSY
          STA      LCDC
          RTS
 
@@ -172,12 +176,12 @@ CLR      LDA      #$C0              ; move beginning of line 2
 ; sends a string to the display
 ; put string address in SADDR (low byte) then call this routine
 SDISP    LDY      #0
---       LDA      (SADDR),Y
+-        LDA      (SADDR),Y
          BEQ      +                 ; exit when a 0 is read
-         JSR      BUSY              
+         JSR      DELAY              
          STA      LCDD              ; A contains the ASCII character to send
          INY
-         BRA      --
+         BRA      -
 +        RTS
 
 
@@ -219,6 +223,7 @@ D_CH     TAX
 ;DATA
 KEY      !text"123A456B789C*0#D"
 WLCM     !text"65C02 Ready",0
+S1       !text"Hello Rob",0
 
 ;==============================================================================
 ;ISR
