@@ -4,16 +4,10 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
+            "label": "build Acme",
             "type": "shell",
             "osx": {
-                "command": "bin/mac/acme -f plain -l build/labels -o build/main.prg code/clock.asm ",
-            },
-            "windows": {
-                "command": "bin\\win\\acme -f cbm -l build/labels -o build/main.prg code/clock.asm && C:/tools/vice/x64.exe -moncommands build/labels build/main.prg"
-            },
-            "linux": {
-                "command": "bin/linux/acme -f cbm -l build/labels -o build/main.prg code/main.asm && x64 -moncommands build/labels build/main.prg 2> /dev/null"
+                "command": "bin/mac/acme -f plain -l build/labels -o build/compiled.prg ${file}",
             },
             "group": {
                 "kind": "build",
@@ -24,7 +18,10 @@
             },
             "problemMatcher": {
                 "owner": "acme",
-                "fileLocation": ["relative", "${workspaceFolder}"],
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}"
+                ],
                 "pattern": {
                     "regexp": "^(Error - File\\s+(.*), line (\\d+) (\\(Zone .*\\))?:\\s+(.*))$",
                     "file": 2,
@@ -51,7 +48,10 @@
             },
             "problemMatcher": {
                 "owner": "acme",
-                "fileLocation": ["relative", "${workspaceFolder}"],
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}"
+                ],
                 "pattern": {
                     "regexp": "^(Error - File\\s+(.*), line (\\d+) (\\(Zone .*\\))?:\\s+(.*))$",
                     "file": 2,
