@@ -75,7 +75,7 @@ SADDR    = $51             ; low byte address of string to display
 ; MAIN PROGRAM GOES HERE
 ;
          +PRINT   S2
-S2       !text"Cracked it!",0
+S2       !text"Cracked it!",0 
 LOOP     NOP
          JMP      LOOP
 ;==============================================================================
